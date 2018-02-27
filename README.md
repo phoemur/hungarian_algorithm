@@ -1,4 +1,7 @@
 # hungarian_algorithm
+[![Build Status](https://travis-ci.org/phoemur/hungarian_algorithm.svg?branch=master)](https://travis-ci.org/phoemur/hungarian_algorithm)
+
+
 This is an implementation of the Hungarian algorithm in C++
 The Hungarian algorithm, also know as Munkres or Kuhn-Munkres
 algorithm is usefull for solving the assignment problem.
