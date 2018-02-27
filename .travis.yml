@@ -14,4 +14,4 @@ install:
 
 script: 
   - cd ${TRAVIS_BUILD_DIR}
-  - g++ -O2 -Wall -Wpedantic -fPIC -o hungarian hungarian.cpp
+  - g++ -O2 -Wall -Wpedantic -fPIC -std=c++11 -o hungarian hungarian.cpp
