@@ -1,0 +1,17 @@
+language: cpp
+compiler: gcc
+dist: trusty
+
+before_install:
+  - cd ${TRAVIS_BUILD_DIR}
+  - sudo add-apt-repository --yes ppa:ubuntu-sdk-team/ppa
+  - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+
+install:
+  - sudo apt-get install -qq g++-7
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 90
+
+script: 
+  - cd ${TRAVIS_BUILD_DIR}
+  - g++ -O2 -Wall -Wpedantic -fPIC -o hungarian hungarian.cpp
