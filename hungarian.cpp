@@ -19,7 +19,10 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <iterator>
 #include <limits>
+#include <list>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -27,22 +30,25 @@
 namespace Munkres {
     
 /* Utility function to print Matrix */
-template<typename T>
-std::ostream& operator<<(std::ostream& os,
-                         const std::vector<std::vector<T>>& con)
+template<template <typename, typename...> class Container,
+                   typename T,
+                   typename... Args>
+//disable for string, which is std::basic_string<char>, a container itself
+typename std::enable_if<!std::is_convertible<Container<T, Args...>, std::string>::value &&
+                        !std::is_constructible<Container<T, Args...>, std::string>::value,
+                            std::ostream&>::type
+operator<<(std::ostream& os, const Container<T, Args...>& con)
 {
-    for (auto& row: con) {
-        os << "[";
-        for (auto elem: row) {
-            os << elem << ", ";
-        }
-        os << "\b\b]\n";
-    }
-    
+    os << " ";
+    for (auto& elem: con)
+        os << elem << " ";
+
+    os << "\n";
     return os;
 }
 
-/* Handle negative elements if present */
+/* Handle negative elements if present. If allowed = true, add abs(minval) to 
+ * every element to create one zero. Else throw an exception */
 template<typename T>
 void handle_negatives(std::vector<std::vector<T>>& matrix, 
                       bool allowed = true)
@@ -403,35 +409,57 @@ void step6(std::vector<std::vector<T>>& matrix,
     step = 4;
 }
 
-/* Calculates the optimal cost */
-template<typename T>
-T output_solution(const std::vector<std::vector<T>>& original,
+/* Calculates the optimal cost from mask matrix */
+template<template <typename, typename...> class Container,
+         typename T,
+         typename... Args>
+T output_solution(const Container<Container<T,Args...>>& original,
                   const std::vector<std::vector<int>>& M)
 {
     T res = 0;
     
-    for (unsigned j=0; j<original[0].size(); ++j)
+    for (unsigned j=0; j<original.begin()->size(); ++j)
         for (unsigned i=0; i<original.size(); ++i)
             if (M[i][j]) {
-                res += original[i][j];
+                auto it1 = original.begin();
+                std::advance(it1, i);
+                auto it2 = it1->begin();
+                std::advance(it2, j);
+                res += *it2;
                 continue;                
             }
             
     return res;
 }
 
-template<typename T>
-typename std::enable_if<std::is_integral<T>::value, T>::type
-hungarian(const std::vector<std::vector<T>>& original)
+
+/* Main function of the algorithm */
+template<template <typename, typename...> class Container,
+         typename T,
+         typename... Args>
+typename std::enable_if<std::is_integral<T>::value, T>::type // Work only on integral types
+hungarian(const Container<Container<T,Args...>>& original,
+          bool allow_negatives = true)
 {  
     /* Initialize data structures */
     
-    // Work on a copy to preserve original matrix
+    // Work on a vector copy to preserve original matrix
     // Didn't passed by value cause needed to access both
-    std::vector<std::vector<T>> matrix (original);
+    std::vector<std::vector<T>> matrix (original.size(), 
+                                        std::vector<T>(original.begin()->size()));
+    
+    auto it = original.begin();
+    for (auto& vec: matrix) {         
+        std::copy(it->begin(), it->end(), vec.begin());
+        it = std::next(it);
+    }
     
     // handle negative values -> pass true if allowed or false otherwise
-    handle_negatives(matrix, true);
+    // if it is an unsigned type just skip this step
+    if (!std::is_unsigned<T>::value) {
+        handle_negatives(matrix, allow_negatives);
+    }
+    
     
     // make square matrix
     pad_matrix(matrix);
@@ -475,7 +503,7 @@ hungarian(const std::vector<std::vector<T>>& original)
                 step6(matrix, RowCover, ColCover, step);
                 break;
             case 7:
-                for (auto& vec: M) {vec.resize(original[0].size());}
+                for (auto& vec: M) {vec.resize(original.begin()->size());}
                 M.resize(original.size());
                 done = true;
                 break;
@@ -485,9 +513,9 @@ hungarian(const std::vector<std::vector<T>>& original)
         }
     }
     
-    // Printing part (optional)
+    //Printing part (optional)
     std::cout << "Cost Matrix: \n" << original << std::endl 
-              << "Optimal assignment: \n" << M << std::endl;
+              << "Optimal assignment: \n" << M;
     
     return output_solution(original, M);
 }
@@ -501,29 +529,31 @@ int main() //example of usage
     using namespace Munkres;
     using namespace std;
     
-    vector<vector<int>> matrix {{85,  12,  36,  83,  50,  96,  12,  1 },
-                                {84,  35,  16,  17,  40,  94,  16,  52},
-                                {14,  16,  8 ,  53,  14,  12,  70,  50},
-                                {73,  83,  19,  44,  83,  66,  71,  18},
-                                {36,  45,  29,  4 ,  61,  15,  70,  47},
-                                {7 ,  14,  11,  69,  57,  32,  37,  81},
-                                {9 ,  65,  38,  74,  87,  51,  86,  52},
-                                {52,  40,  56,  10,  42,  2 ,  26,  36},
-                                {85,  86,  36,  90,  49,  89,  41,  74},
-                                {40,  67,  2 ,  70,  18,  5 ,  94,  43},
-                                {85,  12,  36,  83,  50,  96,  12,  1 },
-                                {84,  35,  16,  17,  40,  94,  16,  52},
-                                {14,  16,  8 ,  53,  14,  12,  70,  50},
-                                {73,  83,  19,  44,  83,  66,  71,  18},
-                                {36,  45,  29,  4 ,  61,  15,  70,  47},
-                                {7 ,  14,  11,  69,  57,  32,  37,  81},
-                                {9 ,  65,  38,  74,  87,  51,  86,  52},
-                                {52,  40,  56,  10,  42,  2 ,  26,  36},
-                                {85,  86,  36,  90,  49,  89,  41,  74},
-                                {40,  67,  2 ,  70,  18,  5 ,  94,  43}};
+    // work on multiple containers of the STL
+    list<list<int>> matrix {{85,  12,  36,  83,  50,  96,  12,  1 },
+                            {84,  35,  16,  17,  40,  94,  16,  52},
+                            {14,  16,  8 ,  53,  14,  12,  70,  50},
+                            {73,  83,  19,  44,  83,  66,  71,  18},
+                            {36,  45,  29,  4 ,  61,  15,  70,  47},
+                            {7 ,  14,  11,  69,  57,  32,  37,  81},
+                            {9 ,  65,  38,  74,  87,  51,  86,  52},
+                            {52,  40,  56,  10,  42,  2 ,  26,  36},
+                            {85,  86,  36,  90,  49,  89,  41,  74},
+                            {40,  67,  2 ,  70,  18,  5 ,  94,  43},
+                            {85,  12,  36,  83,  50,  96,  12,  1 },
+                            {84,  35,  16,  17,  40,  94,  16,  52},
+                            {14,  16,  8 ,  53,  14,  12,  70,  50},
+                            {73,  83,  19,  44,  83,  66,  71,  18},
+                            {36,  45,  29,  4 ,  61,  15,  70,  47},
+                            {7 ,  14,  11,  69,  57,  32,  37,  81},
+                            {9 ,  65,  38,  74,  87,  51,  86,  52},
+                            {52,  40,  56,  10,  42,  2 ,  26,  36},
+                            {85,  86,  36,  90,  49,  89,  41,  74},
+                            {40,  67,  2 ,  70,  18,  5 ,  94,  43}};
                                      
     auto res = hungarian(matrix);
-    std::cout << "Optimal cost: " << res << std::endl << std::endl;
+    std::cout << "Optimal cost: " << res << std::endl;
+    std::cout << "----------------- \n\n";
     
     vector<vector<vector<int>>> tests;
     
@@ -548,7 +578,8 @@ int main() //example of usage
     
     for (auto& m: tests) {
         auto r = hungarian(m);
-        std::cout << "Optimal cost: " << r << std::endl << std::endl;
+        std::cout << "Optimal cost: " << r << std::endl;
+        std::cout << "----------------- \n\n";
     }
     
     return 0;
