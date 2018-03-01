@@ -2,9 +2,6 @@
  * The Hungarian algorithm, also know as Munkres or Kuhn-Munkres
  * algorithm is usefull for solving the assignment problem.
  *
- * This implementation is uses the matrix-based solution, instead
- * of bipartite-graphs matching.
- * 
  * Assignment problem: Let C be an n x n matrix 
  * representing the costs of each of n workers to perform any of n jobs.
  * The assignment problem is to assign jobs to workers so as to 
@@ -90,25 +87,44 @@ void pad_matrix(std::vector<std::vector<T>>& matrix)
     }
 }
 
-/* helper to clear the temporary vectors */
-inline void clear_covers(std::vector<int>& cover) 
-{
-    for (auto& n: cover) n = 0;
-}
-
 /* For each row of the matrix, find the smallest element and subtract it from every 
- * element in its row.  Go to Step 2. */
+ * element in its row.  
+ * For each col of the matrix, find the smallest element and subtract it from every 
+ * element in its col. Go to Step 2. */
 template<typename T>
 void step1(std::vector<std::vector<T>>& matrix, 
            int& step)
 {
+    // process rows
     for (auto& row: matrix) {
         auto smallest = *std::min_element(begin(row), end(row));
         if (smallest > 0)        
             for (auto& n: row)
                 n -= smallest;
     }
+    
+    // process cols
+    int sz = matrix.size(); // square matrix is granted
+    for (int j=0; j<sz; ++j) {
+        T minval = std::numeric_limits<T>::max();
+        for (int i=0; i<sz; ++i) {
+            minval = std::min(minval, matrix[i][j]);
+        }
+        
+        if (minval > 0) {
+            for (int i=0; i<sz; ++i) {
+                matrix[i][j] -= minval;
+            }
+        }
+    }
+   
     step = 2;
+}
+
+/* helper to clear the temporary vectors */
+inline void clear_covers(std::vector<int>& cover) 
+{
+    for (auto& n: cover) n = 0;
 }
 
 /* Find a zero (Z) in the resulting matrix.  If there is no starred zero in its row or 
