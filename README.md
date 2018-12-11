@@ -18,4 +18,4 @@ an independent set of the matrix C.
  
 It is a port heavily based on http://csclab.murraystate.edu/~bob.pilgrim/445/munkres.html
  
-This version is written by Fernando B. Giannasi - feb/2018 - MIT license */
+This version is written by Fernando B. Giannasi - feb/2018
